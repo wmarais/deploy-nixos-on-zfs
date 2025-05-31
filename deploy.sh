@@ -120,6 +120,10 @@ mount -t zfs -o nodev,nosuid,noexec "${ZFS_POOL_NAME}/tmp" /mnt/tmp
 # Generate the base nixos configuration.
 nixos-generate-config --root /mnt
 
+# Copy a nice terminal and editor configuration
+cp ./bash.nix /mnt/etc/nixos/
+cp ./vim.nix /mnt/etc/nixos/
+
 #
 # WRITE CONFIGURATION
 #
