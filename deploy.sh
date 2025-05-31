@@ -26,6 +26,7 @@ part_dev_path() {
   elif [ "$(echo "${1}" | cut -c 1-7)" = "/dev/nv" ]; then
     echo "${1}p${2}"
   else
+    echo "Dev path invalid: ${1}"
     exit 1
   fi
 }
