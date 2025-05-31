@@ -156,7 +156,7 @@ echo "{ config, lib, pkgs, ... }:
 #
 # USERS
 #
-echo "{ ... }:
+echo "{ pkgs, ... }:
 {
     users.users.${ADM_USER_NAME} = {
         isNormalUser = true;
@@ -170,6 +170,7 @@ echo "{ ... }:
 # BOOT
 #
 echo "{ ... }:
+{
     boot.initrd.availableKernelModules = [ \"xhci_pci\" \"ahci\" \"ehci_pci\" \"usb_storage\" \"sd_mod\" ];
     boot.loader.systemd-boot.enable = true;
     boot.loader.efi.canTouchEfiVariables = true;
@@ -240,6 +241,6 @@ echo "{ ... }:
     };
 
     swapDevices = [
-        device = \"${ZFS_PART_DEV}\";
+        { device = \"${ZFS_PART_DEV}\"; }
     ];
 }" > /mnt/etc/nixos/filesystem.nix
