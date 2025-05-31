@@ -1,46 +1,74 @@
 #!/bin/sh
 
+STORAGE_DEV="/dev/sda"
+BOOT_PARTITION="/dev/sda1"
+ZFS_PARTITION="/dev/sda2"
+
+PART_LABEL_BOOT="boot"
+PART_START_BOOT="1MiB"
+
+PART_LABEL_ZFS="zpool"
+PART_START_ZFS="1GiB"
+
+DS_SIZE_SWAP="4G"
+
+ZFS_POOL="storage"
+SWAP_FILE="/dev/zvol/${ZFS_POOL}/swap"
+
 # Quit if any errors occured.
 set -e
 
+# Block the script until the specific file is available.
+wait_for_file () {
+  FILE="$1"
+  until [ -e "${FILE}" ]; do
+    echo "Awaiting: ${FILE}"
+    sleep 1
+  done
+}
+
 # GPT Partition Table
-parted -s /dev/sda mklabel gpt
+parted -s "${STORAGE_DEV}" mklabel gpt
   
 # Setup the Boot Partition
-sudo parted -s -a optimal /dev/sda mkpart ESP fat32 1MiB 1GiB
-sudo mkfs.fat -F 32 -n boot /dev/sda1
-sudo parted /dev/sda set 1 boot on
-sudo parted /dev/sda set 1 esp on
+parted -s -a optimal "${STORAGE_DEV}" mkpart "${PART_LABEL_BOOT}" fat32 "${PART_START_BOOT}" \
+  "${PART_START_ZFS}"
+mkfs.fat -F 32 -n "${PART_LABEL_BOOT}" "${BOOT_PARTITION}"
+parted "${STORAGE_DEV}" set 1 boot on
+parted "${STORAGE_DEV}" set 1 esp on
 
 # Create the second partition for the system data
-sudo parted -s -a optimal /dev/sda mkpart system 1GiB 100%
+parted -s -a optimal "${STORAGE_DEV}" mkpart "${PART_LABEL_ZFS}" "${PART_START_ZFS}" 100%
 
 # Create the storage pool
-sudo zpool create -O compression=on -O mountpoint=none -O xattr=sa \
-    -O acltype=posixacl -o ashift=12 storage /dev/sda2
+zpool create -f -O compression=on -O mountpoint=none -O xattr=sa -O acltype=posixacl -o ashift=12 \
+  "${ZFS_POOL}" "${ZFS_PARTITION}"
 
 # Create the dataset
-zfs create -o mountpoint=legacy storage/root
-zfs create -o mountpoint=legacy storage/var
-zfs create -o mountpoint=legacy storage/nix
-zfs create -o mountpoint=legacy storage/home
-zfs create -o mountpoint=legacy storage/dev-shm
-zfs create -o mountpoint=legacy storage/tmp -V 2G 
+zfs create -o mountpoint=legacy "${ZFS_POOL}/root"
+zfs create -o mountpoint=legacy "${ZFS_POOL}/var"
+zfs create -o mountpoint=legacy "${ZFS_POOL}/nix"
+zfs create -o mountpoint=legacy "${ZFS_POOL}/home"
+zfs create -o mountpoint=legacy "${ZFS_POOL}/dev-shm"
+zfs create -o mountpoint=legacy "${ZFS_POOL}/tmp "
 
-# Coinfigure swap
-zfs create  storage/swap -V 4G
-mkswap /dev/zvol/storage/swap
-swapon /dev/zvol/storage/swap
-
+# Configure swap
+zfs create "${ZFS_POOL}/swap" -V "${DS_SIZE_SWAP}"
+wait_for_file "${SWAP_FILE}"
+mkswap "${SWAP_FILE}"
+swapon "${SWAP_FILE}"
 
 # Setup the mount points
-mount -t zfs storage/root /mnt
+mount -t zfs "${ZFS_POOL}/root" /mnt
 mkdir -p /mnt/boot /mnt/var /mnt/nix /mnt/home /mnt/dev/shm /mnt/tmp
 
 # Mount all the directories
-mount -t vfat /dev/sda1 /mnt/boot
-mount -t zfs storage/var /mnt/var
-mount -t zfs storage/nix /mnt/nix
-mount -t zfs -o nodev storage/home /mnt/home
-mount -t zfs -o nodev,nosuid,noexec storage/home /mnt/dev/shm
-mount -t zfs -o nodev,nosuid,noexec storage/tmp /mnt/tmp
+mount -t vfat "${BOOT_PARTITION}" /mnt/boot
+mount -t zfs "${ZFS_POOL}/var" /mnt/var
+mount -t zfs "${ZFS_POOL}/nix" /mnt/nix
+mount -t zfs -o nodev "${ZFS_POOL}/home" /mnt/home
+mount -t zfs -o nodev,nosuid,noexec "${ZFS_POOL}/home" /mnt/dev/shm
+mount -t zfs -o nodev,nosuid,noexec "${ZFS_POOL}/tmp" /mnt/tmp
+
+# Generate the base nixos configuration.
+nixos-generate-config --root /mnt
