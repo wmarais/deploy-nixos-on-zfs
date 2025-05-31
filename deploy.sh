@@ -100,21 +100,19 @@ zfs create -o mountpoint=legacy "${ZFS_POOL_NAME}/root"
 zfs create -o mountpoint=legacy "${ZFS_POOL_NAME}/var"
 zfs create -o mountpoint=legacy "${ZFS_POOL_NAME}/nix"
 zfs create -o mountpoint=legacy "${ZFS_POOL_NAME}/home"
-zfs create -o mountpoint=legacy -o shm=on -o device=true "${ZFS_POOL_NAME}/shm"
 zfs create -o mountpoint=legacy "${ZFS_POOL_NAME}/tmp"
 
 #
 # DIRECTORY SETUP
 #
 mount -t zfs "${ZFS_POOL_NAME}/root" /mnt
-mkdir -p /mnt/boot /mnt/var /mnt/nix /mnt/home /mnt/dev/shm /mnt/tmp
+mkdir -p /mnt/boot /mnt/var /mnt/nix /mnt/home /mnt/tmp
 
 # Mount all the directories
 mount -t vfat "${BOOT_PART_DEV}" /mnt/boot
 mount -t zfs "${ZFS_POOL_NAME}/var" /mnt/var
 mount -t zfs "${ZFS_POOL_NAME}/nix" /mnt/nix
 mount -t zfs -o nodev "${ZFS_POOL_NAME}/home" /mnt/home
-mount -t zfs -o nodev,nosuid,noexec "${ZFS_POOL_NAME}/shm" /mnt/dev/shm
 mount -t zfs -o nodev,nosuid,noexec "${ZFS_POOL_NAME}/tmp" /mnt/tmp
 
 # Generate the base nixos configuration.
@@ -245,12 +243,6 @@ echo "{ ... }:
         device = \"${ZFS_POOL_NAME}/home\";
         fsType = \"zfs\";
         options = [ \"nodev\" ];
-    };
-
-    fileSystems.\"/dev/shm\" = {
-        device = \"${ZFS_POOL_NAME}/dev-shm\";
-        fsType = \"zfs\";
-        options = [ \"nodev\" \"nosuid\" \"noexec\" ];
     };
 
     fileSystems.\"/tmp\" = {
