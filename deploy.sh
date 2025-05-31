@@ -1,14 +1,14 @@
 #!/bin/sh
 
 HOST_NAME=""
-DEST_DEV=""
+DISK=""
 ADM_USER_NAME=""
 ADM_USER_PASSWORD=""
 
 # Parse the arguments to the script.
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --dest=*)         DEST_DEV="${1#*=}"; shift 1;;
+    --disk=*)         DISK="${1#*=}"; shift 1;;
     --user=*)         ADM_USER_NAME="${1#*=}"; shift 1;;
     --password=*)     ADM_USER_PASSWORD="${1#*=}"; shift 1;;
     --host-name=*)    HOST_NAME="${1#*=}"; shift 1;;
@@ -34,17 +34,17 @@ part_dev_path() {
 BOOT_PART_LABEL="boot"
 BOOT_PART_START="1MiB"
 BOOT_PART_INDEX="1"
-BOOT_PART_DEV=$(part_dev_path "${DEST_DEV}" "${BOOT_PART_INDEX}")
+BOOT_PART_DEV=$(part_dev_path "${DISK}" "${BOOT_PART_INDEX}")
 
 SWAP_PART_LABEL="swap"
 SWAP_PART_START="1GiB"
 SWAP_PART_INDEX="2"
-SWAP_PART_DEV=$(part_dev_path "${DEST_DEV}" "${SWAP_PART_INDEX}")
+SWAP_PART_DEV=$(part_dev_path "${DISK}" "${SWAP_PART_INDEX}")
 
 ZFS_PART_LABEL="system"
 ZFS_PART_START="3GiB"
 ZFS_PART_INDEX="3"
-ZFS_PART_DEV=$(part_dev_path "${DEST_DEV}" "${ZFS_PART_INDEX}")
+ZFS_PART_DEV=$(part_dev_path "${DISK}" "${ZFS_PART_INDEX}")
 
 ZFS_POOL_NAME="system"
 
@@ -57,24 +57,31 @@ wait_for_file () {
   done
 }
 
+echo "CONFIGURATION"
+echo "  Disk: ${DISK}"
+echo "  Partitions:"
+echo "    ${BOOT_PART_LABEL}(${BOOT_PART_DEV}): ${BOOT_PART_START} to ${SWAP_PART_START}"
+echo "    ${SWAP_PART_LABEL}(${SWAP_PART_DEV}): ${SWAP_PART_START} to ${ZFS_PART_START}"
+echo "    ${ZFS_PART_LABEL}(${ZFS_PART_DEV}): ${ZFS_PART_START} to 100%"
+
 #
 # PARTITION TABLE
 #
-parted -s "${DEST_DEV}" mklabel gpt
+parted -s "${DISK}" mklabel gpt
 
 #
 # BOOT
 # 
-parted -s -a optimal "${DEST_DEV}" mkpart "${BOOT_PART_LABEL}" fat32 "${BOOT_PART_START}" \
-  "${PART_START_SWAP}"
-mkfs.fat -F 32 -n "${BOOT_PART_LABEL}" "${BOOT_PARTITION}"
-parted "${DEST_DEV}" set 1 boot on
-parted "${DEST_DEV}" set 1 esp on
+parted -s -a optimal "${DISK}" mkpart "${BOOT_PART_LABEL}" fat32 "${BOOT_PART_START}" \
+  "${SWAP_PART_START}"
+mkfs.fat -F 32 -n "${BOOT_PART_LABEL}" "${BOOT_PART_DEV}"
+parted "${DISK}" set 1 boot on
+parted "${DISK}" set 1 esp on
 
 #
 # SWAP 
 #
-parted -s -a optimal "${DEST_DEV}" mkpart "${SWAP_PART_LABEL}" linux-swap "${SWAP_PART_START}" \
+parted -s -a optimal "${DISK}" mkpart "${SWAP_PART_LABEL}" linux-swap "${SWAP_PART_START}" \
   "${ZFS_PART_START}"
 mkswap "${SWAP_PART_DEV}"
 swapon "${SWAP_PART_DEV}"
@@ -82,7 +89,7 @@ swapon "${SWAP_PART_DEV}"
 #
 # ZFS
 #
-parted -s -a optimal "${DEST_DEV}" mkpart "${ZFS_PART_LABEL}" "${ZFS_PART_START}" 100%
+parted -s -a optimal "${DISK}" mkpart "${ZFS_PART_LABEL}" "${ZFS_PART_START}" 100%
 
 # Create the storage pool
 zpool create -f -O compression=on -O mountpoint=none -O xattr=sa -O acltype=posixacl -o ashift=12 \
