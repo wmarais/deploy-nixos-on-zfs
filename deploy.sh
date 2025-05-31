@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Quit if any errors occured.
+set -e
+
 # GPT Partition Table
 parted -s /dev/sda mklabel gpt
   
