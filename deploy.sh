@@ -67,7 +67,7 @@ mount -t vfat "${BOOT_PARTITION}" /mnt/boot
 mount -t zfs "${ZFS_POOL}/var" /mnt/var
 mount -t zfs "${ZFS_POOL}/nix" /mnt/nix
 mount -t zfs -o nodev "${ZFS_POOL}/home" /mnt/home
-mount -t zfs -o nodev,nosuid,noexec "${ZFS_POOL}/home" /mnt/dev/shm
+mount -t zfs -o nodev,nosuid,noexec "${ZFS_POOL}/dev-shm" /mnt/dev/shm
 mount -t zfs -o nodev,nosuid,noexec "${ZFS_POOL}/tmp" /mnt/tmp
 
 # Generate the base nixos configuration.
