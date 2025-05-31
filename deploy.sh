@@ -158,6 +158,7 @@ echo "{ config, lib, pkgs, ... }:
 #
 echo "{ pkgs, ... }:
 {
+    users.users.root.hashedPassword = \"!\";
     users.users.${ADM_USER_NAME} = {
         isNormalUser = true;
         extraGroups = [ \"wheel\" ];
@@ -241,6 +242,6 @@ echo "{ ... }:
     };
 
     swapDevices = [
-        { device = \"${ZFS_PART_DEV}\"; }
+        { device = \"${SWAP_PART_DEV}\"; }
     ];
 }" > /mnt/etc/nixos/filesystem.nix
