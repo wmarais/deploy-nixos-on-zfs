@@ -50,7 +50,7 @@ zfs create -o mountpoint=legacy "${ZFS_POOL}/var"
 zfs create -o mountpoint=legacy "${ZFS_POOL}/nix"
 zfs create -o mountpoint=legacy "${ZFS_POOL}/home"
 zfs create -o mountpoint=legacy "${ZFS_POOL}/dev-shm"
-zfs create -o mountpoint=legacy "${ZFS_POOL}/tmp "
+zfs create -o mountpoint=legacy "${ZFS_POOL}/tmp"
 
 # Configure swap
 zfs create "${ZFS_POOL}/swap" -V "${DS_SIZE_SWAP}"
