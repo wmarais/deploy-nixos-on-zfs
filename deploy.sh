@@ -10,7 +10,7 @@ sudo parted /dev/sda set 1 boot on
 sudo parted /dev/sda set 1 esp on
 
 # Create the second partition for the system data
-sudo parted -s -a optimal /dev/sda mkpart system 1G 100%
+sudo parted -s -a optimal /dev/sda mkpart system 1GiB 100%
 
 # Create the storage pool
 sudo zpool create -O compression=on -O mountpoint=none -O xattr=sa \
