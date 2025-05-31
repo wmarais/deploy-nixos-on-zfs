@@ -100,7 +100,7 @@ zfs create -o mountpoint=legacy "${ZFS_POOL_NAME}/root"
 zfs create -o mountpoint=legacy "${ZFS_POOL_NAME}/var"
 zfs create -o mountpoint=legacy "${ZFS_POOL_NAME}/nix"
 zfs create -o mountpoint=legacy "${ZFS_POOL_NAME}/home"
-zfs create -o mountpoint=legacy "${ZFS_POOL_NAME}/dev-shm"
+zfs create -o mountpoint=legacy -o shm=on -o device=true "${ZFS_POOL_NAME}/shm"
 zfs create -o mountpoint=legacy "${ZFS_POOL_NAME}/tmp"
 
 #
@@ -114,7 +114,7 @@ mount -t vfat "${BOOT_PART_DEV}" /mnt/boot
 mount -t zfs "${ZFS_POOL_NAME}/var" /mnt/var
 mount -t zfs "${ZFS_POOL_NAME}/nix" /mnt/nix
 mount -t zfs -o nodev "${ZFS_POOL_NAME}/home" /mnt/home
-mount -t zfs -o nodev,nosuid,noexec "${ZFS_POOL_NAME}/dev-shm" /mnt/dev/shm
+mount -t zfs -o nodev,nosuid,noexec "${ZFS_POOL_NAME}/shm" /mnt/dev/shm
 mount -t zfs -o nodev,nosuid,noexec "${ZFS_POOL_NAME}/tmp" /mnt/tmp
 
 # Generate the base nixos configuration.
@@ -136,6 +136,7 @@ echo "{ config, lib, pkgs, ... }:
         ./boot.nix
         ./networking.nix
         ./filesystem.nix
+        ./hardware.nix
         ./users.nix
         ./vim.nix
     ];
@@ -158,7 +159,6 @@ echo "{ config, lib, pkgs, ... }:
 #
 echo "{ pkgs, ... }:
 {
-    users.users.root.hashedPassword = \"!\";
     users.users.${ADM_USER_NAME} = {
         isNormalUser = true;
         extraGroups = [ \"wheel\" ];
@@ -170,12 +170,30 @@ echo "{ pkgs, ... }:
 #
 # BOOT
 #
-echo "{ ... }:
+echo "{ modulesPath, ... }:
 {
+    imports = [
+        (modulesPath + \"/installer/scan/not-detected.nix\")
+    ];
+
     boot.initrd.availableKernelModules = [ \"xhci_pci\" \"ahci\" \"ehci_pci\" \"usb_storage\" \"sd_mod\" ];
+    boot.initrd.kernelModules = [ ];
+    boot.kernelModules = [ ];
+    boot.extraModulePackages = [ ];
     boot.loader.systemd-boot.enable = true;
     boot.loader.efi.canTouchEfiVariables = true;
 }" > /mnt/etc/nixos/boot.nix
+
+
+#
+# HARDWARE CONFIG
+# 
+echo "{ lib, config, ... }:
+{
+    nixpkgs.hostPlatform = lib.mkDefault \"x86_64_linux\";
+    hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
+}" > /mnt/etc/nixos/hardware.nix
+
 
 #
 # WRITE NETWORK CONFIG
