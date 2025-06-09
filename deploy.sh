@@ -219,7 +219,7 @@ echo "{ ... }:
     };
 
     fileSystems.\"/boot\" = {
-        device = \"${BOOT_PART_DEV}\";
+        device = \"/dev/disk/by-partuuid/$(blkid ${BOOT_PART_DEV} -s PARTUUID -o value)\";
         fsType = \"vfat\";
     };
 
